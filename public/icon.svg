@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#07150e" />
+      <stop offset="50%" stop-color="#14532d" />
+      <stop offset="100%" stop-color="#16a34a" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="50%" stop-color="#f0fdf4" />
+      <stop offset="100%" stop-color="#86efac" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bg)" />
+  <circle cx="256" cy="256" r="180" fill="none" stroke="url(#gold)" stroke-width="8" stroke-dasharray="8 8" opacity="0.4"/>
+  
+  <!-- Charminar Arch & Pillars in Green / White Palette -->
+  <path d="M156 380 L156 220 L186 200 L186 380 Z" fill="url(#gold)" />
+  <path d="M356 380 L356 220 L326 200 L326 380 Z" fill="url(#gold)" />
+  <path d="M156 240 Q256 160 356 240 L356 210 Q256 140 156 210 Z" fill="url(#gold)" />
+  <path d="M196 380 Q256 280 316 380 Z" fill="#07150e" />
+  
+  <!-- Minarets -->
+  <rect x="146" y="140" width="20" height="90" rx="6" fill="url(#gold)" />
+  <circle cx="156" cy="130" r="14" fill="url(#gold)" />
+  <rect x="346" y="140" width="20" height="90" rx="6" fill="url(#gold)" />
+  <circle cx="356" cy="130" r="14" fill="url(#gold)" />
+  
+  <!-- Center Star -->
+  <polygon points="256,190 262,206 278,206 265,216 270,232 256,222 242,232 247,216 234,206 250,206" fill="#22c55e" />
+</svg>

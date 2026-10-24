@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --border: #e2e8f0;
+    --primary: #16a34a;
+    --primary-foreground: #ffffff;
+    --gold: #d4af37;
+    --gold-foreground: #422006;
+  }
+
+  .dark {
+    --background: #06140d;
+    --foreground: #f8fafc;
+    --card: #0d2217;
+    --card-foreground: #f8fafc;
+    --border: #1a3827;
+    --primary: #22c55e;
+    --primary-foreground: #ffffff;
+    --gold: #eab308;
+    --gold-foreground: #1e1302;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: rgba(13, 34, 23, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.light .glass-panel {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+}
+
+.glass-card {
+  background: rgba(13, 34, 23, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.light .glass-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.green-gradient {
+  background: linear-gradient(135deg, #15803d 0%, #16a34a 55%, #22c55e 100%);
+}
+
+.nizami-gradient {
+  background: linear-gradient(135deg, #091a11 0%, #0d2a1c 50%, #123524 100%);
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #d4af37 0%, #facc15 50%, #ca8a04 100%);
+}
+
+.gold-text-gradient {
+  background: linear-gradient(135deg, #fef08a 0%, #d4af37 50%, #ca8a04 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom Leaflet Map Fixes */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  z-index: 10;
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #0d2217 !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(34, 197, 94, 0.35) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+}
+
+.leaflet-popup-tip {
+  background: #0d2217 !important;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.6);
+}
+
+/* Print Styles for PDF Export */
+@media print {
+  header,
+  aside,
+  nav,
+  .no-print,
+  button:not(.print-include) {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .print-area {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-page-break {
+    page-break-after: always;
+  }
+}

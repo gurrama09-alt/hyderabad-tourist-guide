@@ -1,0 +1,18 @@
+{
+  "name": "Hyderabad Tourist Guide",
+  "short_name": "HydGuide",
+  "description": "All-in-one tourist guide for Hyderabad: attractions, metro, MMTS, buses, costs and itineraries",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06140d",
+  "theme_color": "#16a34a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
