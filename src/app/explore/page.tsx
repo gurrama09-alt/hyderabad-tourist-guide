@@ -51,6 +51,8 @@ export default function ExplorePage() {
   const [showBus, setShowBus] = useState(true);
   const [showMMTS, setShowMMTS] = useState(true);
   const [showAmenities, setShowAmenities] = useState(true);
+  const [mobileTab, setMobileTab] = useState<'map' | 'list'>('map');
+  const [showLegend, setShowLegend] = useState(false);
 
   // Filter places for search dropdown
   const filteredPlaces = useMemo(() => {
@@ -65,10 +67,40 @@ export default function ExplorePage() {
   }, [searchQuery, currentPlaces]);
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row overflow-hidden relative">
+    <div className="h-[calc(100dvh-8rem)] lg:h-[calc(100vh-4rem)] flex flex-col lg:flex-row overflow-hidden relative pb-16 lg:pb-0">
       
+      {/* Mobile Tab Switcher (Visible on mobile only) */}
+      <div className="lg:hidden flex items-center justify-between p-2.5 bg-card/95 border-b border-border/50 sticky top-0 z-30 shadow-sm shrink-0">
+        <div className="flex rounded-xl bg-background p-1 border border-border/80 w-full gap-1">
+          <button
+            onClick={() => setMobileTab('map')}
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              mobileTab === 'map'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Compass className="w-4 h-4" />
+            <span>Interactive Map</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('list')}
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              mobileTab === 'list'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Spots List ({filteredPlaces.length})</span>
+          </button>
+        </div>
+      </div>
+
       {/* Left / Desktop Sidebar Panel */}
-      <div className="w-full lg:w-96 flex flex-col border-r border-border/40 bg-card/70 backdrop-blur-md shrink-0 max-h-[45vh] lg:max-h-full lg:h-full z-20 overflow-y-auto">
+      <div className={`w-full lg:w-96 flex flex-col border-r border-border/40 bg-card/70 backdrop-blur-md shrink-0 lg:max-h-full lg:h-full z-20 overflow-y-auto ${
+        mobileTab === 'list' ? 'flex-1 h-full' : 'hidden lg:flex'
+      }`}>
         
         {/* Search & Header in Panel */}
         <div className="p-4 border-b border-border/40 space-y-3 sticky top-0 bg-card/95 z-10 backdrop-blur-md">
@@ -257,7 +289,10 @@ export default function ExplorePage() {
               return (
                 <button
                   key={p.id}
-                  onClick={() => setSelectedPlace(p)}
+                  onClick={() => {
+                    setSelectedPlace(p);
+                    setMobileTab('map');
+                  }}
                   className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center justify-between border transition-all ${
                     isSelected
                       ? 'bg-nizami/15 text-nizami-gold border-nizami-gold/40 font-semibold'
@@ -278,7 +313,9 @@ export default function ExplorePage() {
       </div>
 
       {/* Main Map Canvas Area */}
-      <div className="flex-1 relative min-h-[45vh] lg:h-full w-full">
+      <div className={`flex-1 relative h-full w-full ${
+        mobileTab === 'map' ? 'flex flex-col min-h-0' : 'hidden lg:flex'
+      }`}>
         <DynamicLeafletMap
           places={filteredPlaces}
           selectedPlace={selectedPlace}
@@ -304,9 +341,32 @@ export default function ExplorePage() {
           </button>
         </div>
 
-        {/* Legend Overlay at bottom-right */}
-        <div className="flex absolute bottom-4 right-4 z-20 flex-col gap-1 p-3.5 rounded-2xl bg-card/95 backdrop-blur-md border border-border/80 text-[11px] shadow-lg max-w-xs">
-          <span className="font-semibold text-foreground mb-1">Transit Network Legend</span>
+        {/* Mobile Floating Legend Button */}
+        <div className="lg:hidden absolute bottom-4 left-4 z-20">
+          <button
+            onClick={() => setShowLegend(!showLegend)}
+            className="px-3 py-1.5 rounded-xl bg-card/95 backdrop-blur-md border border-border/80 text-foreground font-semibold text-xs shadow-md flex items-center gap-1.5 hover:bg-card"
+          >
+            <Layers className="w-3.5 h-3.5 text-emerald-500" />
+            <span>{showLegend ? 'Hide Legend' : 'Legend'}</span>
+          </button>
+        </div>
+
+        {/* Legend Overlay */}
+        <div
+          className={`${
+            showLegend ? 'flex' : 'hidden'
+          } lg:flex absolute bottom-4 right-4 z-20 flex-col gap-1 p-3.5 rounded-2xl bg-card/95 backdrop-blur-md border border-border/80 text-[11px] shadow-lg max-w-xs`}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-semibold text-foreground">Transit Network Legend</span>
+            <button
+              onClick={() => setShowLegend(false)}
+              className="lg:hidden p-0.5 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-1 rounded bg-metro-red" />
             <span>Red Line (Miyapur ↔ LB Nagar)</span>

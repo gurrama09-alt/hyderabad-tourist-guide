@@ -66,9 +66,10 @@ export default function AdminPage() {
 
   // Authentication State
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
-  const [adminEmail, setAdminEmail] = useState<string>('admin@hyderabadtourism.gov.in');
+  const [adminEmail, setAdminEmail] = useState<string>('');
   const [adminPassword, setAdminPassword] = useState<string>('');
   const [authError, setAuthError] = useState<string>('');
+  const [isSavingPlace, setIsSavingPlace] = useState<boolean>(false);
 
   // Check stored admin session on mount
   useEffect(() => {
@@ -135,22 +136,24 @@ export default function AdminPage() {
     localStorage.removeItem('hyd_admin_email');
   };
 
-  const handleSavePlace = (e: React.FormEvent) => {
+  const handleSavePlace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPlace) return;
 
+    setIsSavingPlace(true);
     const updated: TouristPlace = {
       ...editingPlace,
       verified: true,
       last_updated: new Date().toISOString(),
     };
-    updatePlace(updated);
+    await updatePlace(updated);
 
+    setIsSavingPlace(false);
     setSaveSuccess(true);
     setTimeout(() => {
       setSaveSuccess(false);
       setEditingPlace(null);
-    }, 1500);
+    }, 1800);
   };
 
   // Add photo to current editing place gallery
@@ -233,7 +236,9 @@ export default function AdminPage() {
                 type="email"
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
-                className="w-full bg-background border border-border/80 rounded-xl p-3 text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Enter your official admin email"
+                autoComplete="off"
+                className="w-full bg-background border border-border/80 rounded-xl p-3 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 required
               />
             </div>
@@ -246,10 +251,10 @@ export default function AdminPage() {
                 type="password"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="Enter your admin password"
-                className="w-full bg-background border border-border/80 rounded-xl p-3 text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Enter your admin passcode"
+                autoComplete="new-password"
+                className="w-full bg-background border border-border/80 rounded-xl p-3 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 required
-                autoFocus
               />
             </div>
 
@@ -932,7 +937,7 @@ export default function AdminPage() {
               {saveSuccess ? (
                 <div className="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-semibold text-center flex items-center justify-center gap-2">
                   <CheckCircle2 className="w-5 h-5" />
-                  <span>Attraction & Images Updated Successfully!</span>
+                  <span>Attraction & Photos Saved & Synced Across All Devices!</span>
                 </div>
               ) : (
                 <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/40">
@@ -945,9 +950,10 @@ export default function AdminPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-green-glow"
+                    disabled={isSavingPlace}
+                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold shadow-green-glow flex items-center gap-2"
                   >
-                    Save & Verify Attraction
+                    {isSavingPlace ? 'Syncing to Cloud...' : 'Save & Verify Attraction'}
                   </button>
                 </div>
               )}

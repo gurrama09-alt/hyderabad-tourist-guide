@@ -69,6 +69,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Hydrate customized places from localStorage
     setPlaces(getCustomPlaces());
 
+    // Fetch latest shared places from server / Supabase so viewers see updates
+    fetch('/api/places')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && Array.isArray(data.places) && data.places.length > 0) {
+          setPlaces(data.places);
+          saveCustomPlaces(data.places);
+        }
+      })
+      .catch((err) => console.warn('Could not sync shared places:', err));
+
     // Listen to custom updates and storage changes
     const handlePlacesChange = () => {
       setPlaces(getCustomPlaces());
@@ -139,14 +150,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const isPlaceSaved = (id: string) => savedPlaceIds.includes(id);
 
-  const updatePlace = (updated: TouristPlace) => {
+  const updatePlace = async (updated: TouristPlace) => {
     const list = updateCustomPlace(updated);
     setPlaces(list);
+
+    // Sync to server / database so all viewers across other devices see the update
+    try {
+      await fetch('/api/places', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ places: list }),
+      });
+    } catch (err) {
+      console.warn('Failed to sync place update to server:', err);
+    }
   };
 
-  const resetPlaces = () => {
+  const resetPlaces = async () => {
     saveCustomPlaces(TOURIST_PLACES);
     setPlaces(TOURIST_PLACES);
+    try {
+      await fetch('/api/places', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ places: TOURIST_PLACES }),
+      });
+    } catch (err) {
+      console.warn('Failed to reset places on server:', err);
+    }
   };
 
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
