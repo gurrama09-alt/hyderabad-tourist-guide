@@ -35,7 +35,7 @@ function RoutesContent() {
   const [originPlaceId, setOriginPlaceId] = useState<string>(initialOriginId);
   const [destPlaceId, setDestPlaceId] = useState<string>(initialDestId);
   const [useCurrentLocation, setUseCurrentLocation] = useState<boolean>(false);
-  const [selectedOptionId, setSelectedOptionId] = useState<string>('opt_metro_fastest');
+  const [selectedOptionId, setSelectedOptionId] = useState<string>('');
 
   // Find objects
   const originPlace = allPlaces.find((p) => p.id === originPlaceId) || allPlaces[0];
@@ -59,7 +59,7 @@ function RoutesContent() {
   }, [originCoords, destCoords]);
 
   const activeOption =
-    journeyOptions.find((o) => o.id === selectedOptionId) || journeyOptions[0];
+    (selectedOptionId && journeyOptions.find((o) => o.id === selectedOptionId)) || journeyOptions[0];
 
   // Swap Origin and Destination
   const handleSwap = () => {

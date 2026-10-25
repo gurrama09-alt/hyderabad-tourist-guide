@@ -436,5 +436,48 @@ export function planJourney(
     lastUpdated: nowISO,
   };
 
+  // If distance is below 2km, prefer walking route as the first option
+  if (straightLineDist < 2) {
+    const walkDist = parseFloat((straightLineDist * 1.3).toFixed(1)); // walking path is ~30% longer than straight line
+    const walkDuration = Math.round(walkDist * 13); // ~13 min per km walking pace
+
+    const optionWalking: JourneyOption = {
+      id: 'opt_walking_preferred',
+      title: 'Walking Route (Recommended)',
+      tag: 'fastest',
+      tagLabel: '🚶 Walk — Under 2km',
+      totalDurationMins: walkDuration,
+      totalDistanceKm: walkDist,
+      totalCostInr: 0,
+      transferCount: 0,
+      legs: [
+        {
+          id: 'leg_walk_direct',
+          mode: 'walking',
+          fromName: origin.name,
+          toName: destination.name,
+          fromCoords: [origin.lat, origin.lng],
+          toCoords: [destination.lat, destination.lng],
+          distanceKm: walkDist,
+          distanceType: 'walking',
+          durationMins: walkDuration,
+          fareInr: 0,
+          fareType: 'official',
+          instructions: [
+            `Walk ${walkDist} km (approx. ${walkDuration} minutes) directly from ${origin.name} to ${destination.name}.`,
+            'Follow pedestrian walkways, heritage corridors, and footbridges.',
+            'This distance is under 2 km — walking is the most convenient and free option!',
+            'Stay on well-lit paths and use designated crossings at major junctions.',
+          ],
+        },
+      ],
+      summary: `Only ${walkDist} km away — walking is free, healthy, and avoids traffic. Estimated ${walkDuration} min walk through heritage corridors.`,
+      lastUpdated: nowISO,
+    };
+
+    // Walking is preferred first, then other options
+    return [optionWalking, optionCheapest, optionAuto, optionCab];
+  }
+
   return [optionFastest, optionCheapest, optionAuto, optionCab];
 }

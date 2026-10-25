@@ -68,7 +68,7 @@ export default function ExplorePage() {
     <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row overflow-hidden relative">
       
       {/* Left / Desktop Sidebar Panel */}
-      <div className="w-full lg:w-96 flex flex-col border-r border-border/40 bg-card/70 backdrop-blur-md shrink-0 h-auto lg:h-full z-20 overflow-y-auto">
+      <div className="w-full lg:w-96 flex flex-col border-r border-border/40 bg-card/70 backdrop-blur-md shrink-0 max-h-[45vh] lg:max-h-full lg:h-full z-20 overflow-y-auto">
         
         {/* Search & Header in Panel */}
         <div className="p-4 border-b border-border/40 space-y-3 sticky top-0 bg-card/95 z-10 backdrop-blur-md">
@@ -278,7 +278,7 @@ export default function ExplorePage() {
       </div>
 
       {/* Main Map Canvas Area */}
-      <div className="flex-1 relative h-[50vh] lg:h-full w-full">
+      <div className="flex-1 relative min-h-[45vh] lg:h-full w-full">
         <DynamicLeafletMap
           places={filteredPlaces}
           selectedPlace={selectedPlace}
@@ -305,7 +305,7 @@ export default function ExplorePage() {
         </div>
 
         {/* Legend Overlay at bottom-right */}
-        <div className="hidden sm:flex absolute bottom-4 right-4 z-20 flex-col gap-1 p-3.5 rounded-2xl bg-card/95 backdrop-blur-md border border-border/80 text-[11px] shadow-lg max-w-xs">
+        <div className="flex absolute bottom-4 right-4 z-20 flex-col gap-1 p-3.5 rounded-2xl bg-card/95 backdrop-blur-md border border-border/80 text-[11px] shadow-lg max-w-xs">
           <span className="font-semibold text-foreground mb-1">Transit Network Legend</span>
           <div className="flex items-center gap-2">
             <span className="w-3 h-1 rounded bg-metro-red" />

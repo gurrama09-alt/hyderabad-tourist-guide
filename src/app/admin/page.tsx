@@ -239,15 +239,14 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="font-semibold block mb-1 text-foreground flex items-center justify-between">
-                <span>Passcode / Password</span>
-                <span className="text-[10px] text-emerald-500 font-mono">Demo: Nizam2026! or 1591</span>
+              <label className="font-semibold block mb-1 text-foreground">
+                Passcode / Password
               </label>
               <input
                 type="password"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="Enter password or PIN 1591"
+                placeholder="Enter your admin password"
                 className="w-full bg-background border border-border/80 rounded-xl p-3 text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 required
                 autoFocus
