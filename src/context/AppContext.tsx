@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { SupportedLanguage, TouristPlace } from '@/types';
 import {
   getSavedPlaceIds,
@@ -42,6 +42,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [offlineLastUpdated, setOfflineLastUpdated] = useState<string>('');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
+  // Track server's last update timestamp for efficient polling (ref avoids stale closure in setInterval)
+  const serverUpdatedAtRef = useRef<string>('');
+
   useEffect(() => {
     // Hydrate language
     const storedLang = localStorage.getItem('hyd_user_language') as SupportedLanguage;
@@ -76,11 +79,78 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (data && Array.isArray(data.places) && data.places.length > 0) {
           setPlaces(data.places);
           saveCustomPlaces(data.places);
+          if (data.updated_at) {
+            serverUpdatedAtRef.current = data.updated_at;
+          }
         }
       })
       .catch((err) => console.warn('Could not sync shared places:', err));
 
-    // Listen to custom updates and storage changes
+    // ── Supabase Realtime: instant push when admin updates photos ──
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let realtimeChannel: any = null;
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const isSupabaseReady =
+      supabaseUrl && supabaseKey &&
+      supabaseUrl.startsWith('https://') &&
+      !supabaseUrl.includes('your-project');
+
+    if (isSupabaseReady) {
+      import('@supabase/supabase-js').then(({ createClient }) => {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        realtimeChannel = supabase
+          .channel('shared-places-updates')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'shared_places',
+              filter: 'id=eq.global_places',
+            },
+            (payload) => {
+              // Admin pushed an update — re-fetch fresh data immediately
+              console.log('[Realtime] shared_places changed, syncing...');
+              fetch('/api/places')
+                .then((res) => res.json())
+                .then((data) => {
+                  if (data && Array.isArray(data.places) && data.places.length > 0) {
+                    setPlaces(data.places);
+                    saveCustomPlaces(data.places);
+                    if (data.updated_at) {
+                      serverUpdatedAtRef.current = data.updated_at;
+                    }
+                  }
+                })
+                .catch((err) => console.warn('[Realtime] Sync failed:', err));
+            }
+          )
+          .subscribe();
+      }).catch((err) => console.warn('Could not initialize Supabase Realtime:', err));
+    }
+
+    // ── Polling fallback: check every 30s for changes (lightweight) ──
+    // Uses ?since= param so the server returns minimal data when nothing changed
+    const pollInterval = setInterval(() => {
+      const since = serverUpdatedAtRef.current;
+      const url = since ? `/api/places?since=${encodeURIComponent(since)}` : '/api/places';
+      fetch(url)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.changed && data.places && Array.isArray(data.places) && data.places.length > 0) {
+            setPlaces(data.places);
+            saveCustomPlaces(data.places);
+          }
+          if (data.updated_at) {
+            serverUpdatedAtRef.current = data.updated_at;
+          }
+        })
+        .catch(() => { /* silent - offline or network blip */ });
+    }, 30000); // 30 seconds
+
+    // Listen to custom updates and storage changes (same browser)
     const handlePlacesChange = () => {
       setPlaces(getCustomPlaces());
     };
@@ -102,6 +172,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     return () => {
+      // Cleanup Supabase Realtime subscription
+      if (realtimeChannel) {
+        realtimeChannel.unsubscribe();
+      }
+      clearInterval(pollInterval);
       window.removeEventListener('hyd_places_updated', handlePlacesChange);
       window.removeEventListener('storage', handlePlacesChange);
       window.removeEventListener('online', handleOnline);

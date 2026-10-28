@@ -55,8 +55,12 @@ function getSupabaseClient() {
 }
 
 // GET /api/places - Returns shared places for all viewers and devices
-export async function GET() {
+// Supports lightweight polling: ?since=<ISO timestamp> returns 304 if no changes
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const sinceParam = url.searchParams.get('since');
+
     const supabase = getSupabaseClient();
     if (supabase) {
       try {
@@ -67,6 +71,18 @@ export async function GET() {
           .maybeSingle();
 
         if (!error && data && data.places_json) {
+          // Lightweight poll: if client already has this version, return 304
+          if (sinceParam && data.updated_at) {
+            const sinceDate = new Date(sinceParam).getTime();
+            const serverDate = new Date(data.updated_at).getTime();
+            if (!isNaN(sinceDate) && !isNaN(serverDate) && sinceDate >= serverDate) {
+              return NextResponse.json(
+                { changed: false, updated_at: data.updated_at },
+                { status: 200 }
+              );
+            }
+          }
+
           const parsed = typeof data.places_json === 'string' ? JSON.parse(data.places_json) : data.places_json;
           if (Array.isArray(parsed) && parsed.length > 0) {
             writeLocalBackup(parsed);
@@ -74,6 +90,7 @@ export async function GET() {
               places: parsed,
               updated_at: data.updated_at,
               source: 'supabase',
+              changed: true,
             });
           }
         }
@@ -85,14 +102,27 @@ export async function GET() {
     // Fallback to local memory / file cache
     const backup = readLocalBackup();
     if (backup && backup.length > 0) {
+      // Lightweight poll check for server-cache fallback
+      if (sinceParam) {
+        const sinceDate = new Date(sinceParam).getTime();
+        const serverDate = new Date(lastUpdatedTimestamp).getTime();
+        if (!isNaN(sinceDate) && !isNaN(serverDate) && sinceDate >= serverDate) {
+          return NextResponse.json(
+            { changed: false, updated_at: lastUpdatedTimestamp },
+            { status: 200 }
+          );
+        }
+      }
+
       return NextResponse.json({
         places: backup,
         updated_at: lastUpdatedTimestamp,
         source: 'server-cache',
+        changed: true,
       });
     }
 
-    return NextResponse.json({ places: null, source: 'seed' });
+    return NextResponse.json({ places: null, source: 'seed', changed: false });
   } catch (err) {
     console.error('GET /api/places error:', err);
     return NextResponse.json({ places: null, error: 'Server error' }, { status: 500 });
