@@ -141,8 +141,17 @@ export default function AdminPage() {
     if (!editingPlace) return;
 
     setIsSavingPlace(true);
+    const photosList = editingPlace.photos && editingPlace.photos.length > 0
+      ? editingPlace.photos
+      : [editingPlace.cover_image];
+
+    const finalPhotos = photosList.includes(editingPlace.cover_image)
+      ? photosList
+      : [editingPlace.cover_image, ...photosList];
+
     const updated: TouristPlace = {
       ...editingPlace,
+      photos: finalPhotos,
       verified: true,
       last_updated: new Date().toISOString(),
     };

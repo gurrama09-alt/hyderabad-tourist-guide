@@ -72,19 +72,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Hydrate customized places from localStorage
     setPlaces(getCustomPlaces());
 
-    // Fetch latest shared places from server / Supabase so viewers see updates
-    fetch('/api/places')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && Array.isArray(data.places) && data.places.length > 0) {
-          setPlaces(data.places);
-          saveCustomPlaces(data.places);
-          if (data.updated_at) {
+    // Fetch latest shared places from server / Supabase with cache-busting
+    const fetchSharedPlaces = (since?: string) => {
+      const url = since
+        ? `/api/places?_t=${Date.now()}&since=${encodeURIComponent(since)}`
+        : `/api/places?_t=${Date.now()}`;
+
+      return fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.changed && Array.isArray(data.places) && data.places.length > 0) {
+            setPlaces(data.places);
+            saveCustomPlaces(data.places);
+          } else if (data && !since && Array.isArray(data.places) && data.places.length > 0) {
+            setPlaces(data.places);
+            saveCustomPlaces(data.places);
+          }
+          if (data?.updated_at) {
             serverUpdatedAtRef.current = data.updated_at;
           }
-        }
-      })
-      .catch((err) => console.warn('Could not sync shared places:', err));
+        })
+        .catch((err) => console.warn('Could not sync shared places:', err));
+    };
+
+    // Initial fetch
+    fetchSharedPlaces();
+
+    // ── BroadcastChannel: instant cross-tab & cross-window sync in same browser (<5ms) ──
+    let broadcastChannel: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        broadcastChannel = new BroadcastChannel('hyd_places_channel');
+        broadcastChannel.onmessage = (event) => {
+          if (event.data?.type === 'PLACES_UPDATED' && Array.isArray(event.data.places)) {
+            setPlaces(event.data.places);
+            saveCustomPlaces(event.data.places);
+            if (event.data.updated_at) {
+              serverUpdatedAtRef.current = event.data.updated_at;
+            }
+          }
+        };
+      } catch (err) {
+        console.warn('BroadcastChannel initialization note:', err);
+      }
+    }
 
     // ── Supabase Realtime: instant push when admin updates photos ──
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,45 +147,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               table: 'shared_places',
               filter: 'id=eq.global_places',
             },
-            (payload) => {
+            () => {
               // Admin pushed an update — re-fetch fresh data immediately
-              console.log('[Realtime] shared_places changed, syncing...');
-              fetch('/api/places')
-                .then((res) => res.json())
-                .then((data) => {
-                  if (data && Array.isArray(data.places) && data.places.length > 0) {
-                    setPlaces(data.places);
-                    saveCustomPlaces(data.places);
-                    if (data.updated_at) {
-                      serverUpdatedAtRef.current = data.updated_at;
-                    }
-                  }
-                })
-                .catch((err) => console.warn('[Realtime] Sync failed:', err));
+              console.log('[Realtime] shared_places changed, syncing fresh photos...');
+              fetchSharedPlaces();
             }
           )
-          .subscribe();
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('[Realtime] Connected to live photo updates channel');
+            }
+          });
       }).catch((err) => console.warn('Could not initialize Supabase Realtime:', err));
     }
 
-    // ── Polling fallback: check every 30s for changes (lightweight) ──
-    // Uses ?since= param so the server returns minimal data when nothing changed
+    // ── Polling fallback: check every 5s for changes (ultra lightweight 304 response) ──
     const pollInterval = setInterval(() => {
-      const since = serverUpdatedAtRef.current;
-      const url = since ? `/api/places?since=${encodeURIComponent(since)}` : '/api/places';
-      fetch(url)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.changed && data.places && Array.isArray(data.places) && data.places.length > 0) {
-            setPlaces(data.places);
-            saveCustomPlaces(data.places);
-          }
-          if (data.updated_at) {
-            serverUpdatedAtRef.current = data.updated_at;
-          }
-        })
-        .catch(() => { /* silent - offline or network blip */ });
-    }, 30000); // 30 seconds
+      fetchSharedPlaces(serverUpdatedAtRef.current);
+    }, 5000); // 5 seconds live polling
+
+    // ── Instant Sync on tab focus or visibility change ──
+    const handleVisibilitySync = () => {
+      if (document.visibilityState === 'visible') {
+        fetchSharedPlaces(serverUpdatedAtRef.current);
+      }
+    };
+    const handleFocusSync = () => {
+      fetchSharedPlaces(serverUpdatedAtRef.current);
+    };
+
+    window.addEventListener('focus', handleFocusSync);
+    document.addEventListener('visibilitychange', handleVisibilitySync);
 
     // Listen to custom updates and storage changes (same browser)
     const handlePlacesChange = () => {
@@ -159,7 +188,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // Online/Offline listener
     setIsOnline(navigator.onLine);
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      fetchSharedPlaces();
+    };
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -172,11 +204,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     return () => {
-      // Cleanup Supabase Realtime subscription
+      if (broadcastChannel) {
+        broadcastChannel.close();
+      }
       if (realtimeChannel) {
         realtimeChannel.unsubscribe();
       }
       clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocusSync);
+      document.removeEventListener('visibilitychange', handleVisibilitySync);
       window.removeEventListener('hyd_places_updated', handlePlacesChange);
       window.removeEventListener('storage', handlePlacesChange);
       window.removeEventListener('online', handleOnline);
@@ -229,13 +265,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const list = updateCustomPlace(updated);
     setPlaces(list);
 
-    // Sync to server / database so all viewers across other devices see the update
+    const nowIso = new Date().toISOString();
+    serverUpdatedAtRef.current = nowIso;
+
+    // 1. Instant cross-tab broadcast in same browser
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const bc = new BroadcastChannel('hyd_places_channel');
+        bc.postMessage({
+          type: 'PLACES_UPDATED',
+          places: list,
+          updated_at: nowIso,
+        });
+        bc.close();
+      } catch (err) {
+        console.warn('BroadcastChannel send note:', err);
+      }
+    }
+
+    // 2. Sync to server / database so all viewers across all other devices see the update
     try {
-      await fetch('/api/places', {
+      const res = await fetch('/api/places', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ places: list }),
       });
+      const data = await res.json();
+      if (data?.updated_at) {
+        serverUpdatedAtRef.current = data.updated_at;
+      }
     } catch (err) {
       console.warn('Failed to sync place update to server:', err);
     }
@@ -244,12 +302,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const resetPlaces = async () => {
     saveCustomPlaces(TOURIST_PLACES);
     setPlaces(TOURIST_PLACES);
+    const nowIso = new Date().toISOString();
+    serverUpdatedAtRef.current = nowIso;
+
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const bc = new BroadcastChannel('hyd_places_channel');
+        bc.postMessage({
+          type: 'PLACES_UPDATED',
+          places: TOURIST_PLACES,
+          updated_at: nowIso,
+        });
+        bc.close();
+      } catch (err) {
+        console.warn('BroadcastChannel send note:', err);
+      }
+    }
+
     try {
-      await fetch('/api/places', {
+      const res = await fetch('/api/places', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ places: TOURIST_PLACES }),
       });
+      const data = await res.json();
+      if (data?.updated_at) {
+        serverUpdatedAtRef.current = data.updated_at;
+      }
     } catch (err) {
       console.warn('Failed to reset places on server:', err);
     }

@@ -21,3 +21,8 @@ CREATE POLICY "Public read shared_places" ON public.shared_places
 DROP POLICY IF EXISTS "Public upsert shared_places" ON public.shared_places;
 CREATE POLICY "Public upsert shared_places" ON public.shared_places
   FOR ALL USING (true) WITH CHECK (true);
+
+-- Enable Realtime broadcast on shared_places table
+ALTER PUBLICATION supabase_realtime ADD TABLE public.shared_places;
+ALTER TABLE public.shared_places REPLICA IDENTITY FULL;
+

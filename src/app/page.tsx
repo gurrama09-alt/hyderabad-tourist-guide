@@ -350,6 +350,7 @@ export default function HomePage() {
                   {/* Photo Container */}
                   <div className="relative h-48 w-full overflow-hidden bg-muted">
                     <img
+                      key={`${place.id}-${place.cover_image}`}
                       src={place.cover_image}
                       alt={place.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
